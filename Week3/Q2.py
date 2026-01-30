@@ -14,7 +14,6 @@ for _ in range(3):
     loss = T.tensor(0.0)
     
     for inv, outv in zip(x, y):
-        print(inv, outv)
         p = w * inv + b
 
         p.backward()

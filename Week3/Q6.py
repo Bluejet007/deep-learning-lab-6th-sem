@@ -61,9 +61,6 @@ for _ in range(eps):
 
 print(f'w = {mod.w.detach().numpy()}')
 print(f'b = {mod.b.item()}')
-plt.plot(loss_ep)
-plt.title('MSE vs Epochs')
-# plt.show() # No graph needed for lab book
 
-print(f'x1 = 3, x2 = 2')
+print('x1 = 3, x2 = 2')
 print(f'p = {mod(T.tensor([3.0, 2.0])).item()}')
