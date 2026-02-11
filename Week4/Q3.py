@@ -1,19 +1,9 @@
 import torch as T
 T.set_default_device('cuda' if T.cuda.is_available() else 'cpu')
 
-'''
-('lin1.weight', Parameter containing:
-tensor([[-3.2116, -3.2110],
-        [ 2.1765,  2.1765]], device='cuda:0', requires_grad=True))
-('lin1.bias', Parameter containing:
-tensor([ 1.4687, -3.1650], device='cuda:0', requires_grad=True))
-('lin2.weight', Parameter containing:
-tensor([[-4.1138, -4.1847]], device='cuda:0', requires_grad=True))
-('lin2.bias', Parameter containing:
-tensor([-3.5034], device='cuda:0', requires_grad=True))
-'''
-
-w1 = T.tensor([[-3.2116, -3.2110], [2.1765, 2.1765]])
+w1 = T.tensor([
+    [-3.2116, -3.2110],
+    [2.1765, 2.1765]])
 b1 = T.tensor([1.4687, -3.1650])
 w2 = T.tensor([[-4.1138, -4.1847]])
 b2 = T.tensor([-3.5034])

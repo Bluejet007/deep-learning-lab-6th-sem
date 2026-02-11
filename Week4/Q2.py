@@ -17,6 +17,7 @@ lr = 0.05
 
 class MyDataset(Dataset):
     def __init__(self, X, Y):
+        super().__init__()
         self.X = X
         self.Y = Y
 
@@ -27,13 +28,13 @@ class MyDataset(Dataset):
         return self.X[idx].to(dev), self.Y[idx].to(dev)
 
 class XORModel(nn.Module):
-    def __init__(self, ):
+    def __init__(self):
         super().__init__()
 
         self.lin1 = nn.Linear(2, 2, dtype=T.float32)
         self.act1 = nn.ReLU()
         self.lin2 = nn.Linear(2, 1)
-        self.act2 = nn.ReLU()
+        self.act2 = nn.Sigmoid()
 
     def forward(self, x: T.Tensor):
         x = self.lin1(x)
@@ -46,7 +47,7 @@ full_data = MyDataset(X, Y)
 data_load = DataLoader(full_data, batch_size=batch, shuffle=True)
 mod = XORModel().to(dev)
 print(mod)
-loss_fn = nn.BCEWithLogitsLoss()
+loss_fn = nn.BCELoss()
 opter = T.optim.SGD(mod.parameters(), lr=lr)
 
 def one_epoch():
@@ -61,25 +62,14 @@ def one_epoch():
 
         total += loss.item()
 
-    return total / len(data_load)
+    return total / (len(data_load) * batch)
 
 print()
 loss_l = []
 for e in range(eps):
     mod.train(True)
 
-    total = 0.0
-    for x, y in data_load:
-        opter.zero_grad()
-        p = mod(x)
-
-        loss = loss_fn(p.flatten(), y)
-        loss.backward()
-        opter.step()
-
-        total += loss.item()
-
-    avg_loss = total / (len(data_load) * batch)
+    avg_loss = one_epoch()
     loss_l.append(avg_loss)
 
     if e % (eps // 10) == 0:
@@ -88,10 +78,6 @@ for e in range(eps):
 print()
 for param in mod.named_parameters():
     print(param)
-
-inp = T.tensor([0.0, 1.0], device=dev)
-mod.eval()
-print(f'\nFor x = {inp}, p = {T.sigmoid(mod(inp))}')
 
 plt.plot(loss_l)
 plt.title('Log-loss vs Epochs')
