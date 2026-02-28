@@ -1,10 +1,3 @@
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.append(parent_dir)
-
 import torch as T
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -16,6 +9,7 @@ dev = T.device('cuda' if T.cuda.is_available() else 'cpu')
 batch_size = 64
 epochs = 5
 lr = 0.03
+mod_path = './Week6/Q1.pth'
 
 train_set = FashionMNIST('./data', transform=ToTensor(), download=True) 
 train_load = DataLoader(train_set, batch_size, False)
@@ -24,7 +18,7 @@ test_load = DataLoader(test_set, batch_size, False)
 
 mod: nn.Module  = None
 try:
-    mod = T.load('./models/Q1.pt', weights_only=False)
+    mod = T.load(mod_path, weights_only=False)
 except FileNotFoundError:
     mod = MyDL.CNNClassifier()
 mod.to(dev)
@@ -38,9 +32,9 @@ opter = T.optim.SGD(mod.parameters(), lr=lr)
 
 trainer = MyDL.Trainer(mod, opter, loss_fn, dev)
 trainer.fit(train_load, epochs)
-T.save(mod, './models/Q1.pt')
+T.save(mod, mod_path)
 
-cm = trainer.conf_mat(test_load)
+cm = MyDL.conf_mat(trainer.mod, test_load)
 total = cm.sum().item()
 corr = cm.diag().sum().item()
 acc = 100 * corr / total
