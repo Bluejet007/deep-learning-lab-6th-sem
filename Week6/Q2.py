@@ -9,11 +9,13 @@ from torchvision.models import AlexNet_Weights, alexnet
 from PIL import Image
 import MyDL
 
+f_name = '.'.join(__file__.split('.')[:-1])
+mod_path = f'{f_name}.pth'
+
 dev = T.device("cuda" if T.cuda.is_available() else "cpu")
 b_size = 64
 epochs = 3
 lr = 0.02
-mod_path = './Week6/Q2.pth'
 trans = transforms.Compose([transforms.Resize(256), 
                             transforms.CenterCrop(224), 
                             transforms.ToTensor(), 

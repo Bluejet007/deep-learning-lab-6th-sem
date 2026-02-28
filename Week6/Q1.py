@@ -5,11 +5,13 @@ from torchvision.datasets import FashionMNIST
 from torchvision.transforms import ToTensor
 import MyDL
 
+f_name = '.'.join(__file__.split('.')[:-1])
+mod_path = f'{f_name}.pth'
+
 dev = T.device('cuda' if T.cuda.is_available() else 'cpu')
 batch_size = 64
 epochs = 5
 lr = 0.03
-mod_path = './Week6/Q1.pth'
 
 train_set = FashionMNIST('./data', transform=ToTensor(), download=True) 
 train_load = DataLoader(train_set, batch_size, False)

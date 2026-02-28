@@ -17,6 +17,7 @@ dev = T.device("cuda" if T.cuda.is_available() else "cpu")
 b_size = 64
 epochs = 3
 lr = 0.02
+reg_param = 0.001
 trans = transforms.Compose([transforms.Resize(256), 
                             transforms.CenterCrop(224), 
                             transforms.ToTensor(), 
@@ -76,7 +77,7 @@ except:
     mod.classifier[6] = nn.Linear(num_ftrs, 2)
 
     loss_fn = nn.CrossEntropyLoss()
-    opter = T.optim.SGD(mod.parameters(), lr=lr)
+    opter = T.optim.SGD(mod.parameters(), lr=lr, weight_decay=reg_param)
 
     trainer = MyDL.Trainer(mod, opter, loss_fn, dev)
     trainer.fit(train_load, epochs, check_path)
