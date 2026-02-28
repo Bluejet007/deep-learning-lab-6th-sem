@@ -2,7 +2,11 @@ import torch as T
 import torch.nn as nn
 import os
 from torch.utils.data import DataLoader, Dataset
+import kagglehub
+import glob
+from PIL import Image
 
+# Week 6
 def conf_mat(mod: nn.Module, loader: DataLoader, num_classes: int=10) -> T.Tensor:
     mod.eval()
     dev = next(mod.parameters()).device
@@ -125,3 +129,33 @@ class Trainer:
                 T.save(check, check_path)
 
         return loss_l
+    
+# Week 7
+class AlexDataset(Dataset):
+    def __init__(self, transform, str='train'):
+        print("Trying to fetch dataset from Kaggle....")
+        path = kagglehub.dataset_download("birajsth/cats-and-dogs-filtered")
+        print("Dataset found at: ", path)
+        self.imgs_path = f'{path}/cats_and_dogs_filtered/{str}/'
+        file_list = glob.glob(self.imgs_path + '*')
+        self.data = []
+        for cls_path in file_list:
+            class_name = cls_path.split("/")[-1]
+            for img_pth in glob.glob(cls_path + '/*.jpg'):
+                self.data.append([img_pth, class_name])
+        
+        self.class_map = {"dogs": 0, "cats": 1}
+        self.transform = transform
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        img_path, class_name = self.data[index]
+        img = Image.open(img_path).convert("RGB")
+        label = self.class_map[class_name]
+
+        if self.transform:
+            img = self.transform(img)
+
+        return img, label
