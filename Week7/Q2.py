@@ -1,5 +1,5 @@
 import torch as T
-from torch.utils.data import DataLoader, random_split, ConcatDataset
+from torch.utils.data import DataLoader, random_split
 from torch import nn
 import torchvision.transforms as transf
 from torchvision.models import resnet18, ResNet18_Weights
@@ -14,26 +14,16 @@ dev = T.device("cuda" if T.cuda.is_available() else "cpu")
 b_size = 64
 epochs = 8
 lr = 0.02
+reg_param = 0.0001
 trans = transf.Compose([
     transf.Resize(224),
     transf.ToTensor()
 ])
-aug_trans = transf.Compose([
-    transf.Resize(224),
-    transf.RandomHorizontalFlip(),
-    transf.RandomRotation(15),
-    transf.ColorJitter(0.2, 0.2),
-    transf.ToTensor()
-])
 
-raw_set, _ = random_split(CIFAR10('./data', transform=trans, download=True), (2000, 48000))
-aug_set, _ = random_split(CIFAR10('./data', transform=aug_trans, download=True), (1000, 49000))
-train_set = ConcatDataset((raw_set, aug_set))
+train_set, _ = random_split(CIFAR10('./data', transform=trans, download=True), (1000, 49000))
 train_load = DataLoader(train_set, b_size, True)
-
 test_set, _= random_split(CIFAR10('./data', False, trans, download=True), (300, 9700))
 test_load = DataLoader(test_set, b_size)
-
 train_loss = None
 test_loss = []
 
@@ -52,7 +42,7 @@ except FileNotFoundError:
     mod.fc = nn.Linear(mod.fc.in_features, 10)
 
 loss_fn = nn.CrossEntropyLoss()
-opter = T.optim.SGD(mod.parameters(), lr=lr)
+opter = T.optim.SGD(mod.parameters(), lr=lr, weight_decay=reg_param)
 
 trainer = MyDL.Trainer(mod, opter, loss_fn, dev)
 train_loss, test_loss = trainer.fit(train_load, epochs, check_path, test_load)

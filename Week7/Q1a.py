@@ -1,8 +1,9 @@
 import torch as T
-from torch.utils.data import DataLoader
-import torch.nn as nn
-from torchvision import transforms
-from torchvision.models import AlexNet_Weights, alexnet
+from torch.utils.data import DataLoader, random_split
+from torch import nn
+import torchvision.transforms as transf
+from torchvision.models import resnet18, ResNet18_Weights
+from torchvision.datasets import CIFAR10
 import MyDL
 
 f_name = '.'.join(__file__.split('.')[:-1])
@@ -11,18 +12,19 @@ check_path = f'{f_name}_ch.pt'
 
 dev = T.device("cuda" if T.cuda.is_available() else "cpu")
 b_size = 64
-epochs = 3
+epochs = 8
 lr = 0.02
-reg_param = 0.001
-trans = transforms.Compose([transforms.Resize(256), 
-                            transforms.CenterCrop(224), 
-                            transforms.ToTensor(), 
-                            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224,0.225])])
+trans = transf.Compose([
+    transf.Resize(224),
+    transf.ToTensor()
+])
 
-train_set = MyDL.AlexDataset(trans)
+train_set, _ = random_split(CIFAR10('./data', transform=trans, download=True), (2000, 48000))
 train_load = DataLoader(train_set, b_size, True)
-test_set = MyDL.AlexDataset(trans, 'validation')
-test_load = DataLoader(test_set, 64)
+test_set, _= random_split(CIFAR10('./data', False, trans, download=True), (300, 9700))
+test_load = DataLoader(test_set, b_size)
+train_loss = None
+test_loss = []
 
 mod = None
 
@@ -30,26 +32,23 @@ try:
     mod = T.load(mod_path, weights_only=False)
     mod = mod.to(dev)
     print('Found saved model')
-except:
-    mod = alexnet(weights=AlexNet_Weights.DEFAULT)
+except FileNotFoundError:
+    mod = resnet18(weights=ResNet18_Weights.DEFAULT)
     mod = mod.to(dev)
     print('Downloaded model:')
     print(mod)
 
-    for param in mod.features.parameters():
-        param.requires_grad = False
+    mod.fc = nn.Linear(mod.fc.in_features, 10)
 
-    num_ftrs = mod.classifier[6].in_features
-    mod.classifier[6] = nn.Linear(num_ftrs, 2)
+loss_fn = nn.CrossEntropyLoss()
+opter = T.optim.SGD(mod.parameters(), lr=lr)
 
-    loss_fn = nn.CrossEntropyLoss()
-    opter = T.optim.SGD(mod.parameters(), lr=lr, weight_decay=reg_param)
-
-    trainer = MyDL.Trainer(mod, opter, loss_fn, dev)
-    trainer.fit(train_load, epochs, check_path)
-    T.save(mod, mod_path)
-
-cm = MyDL.conf_mat(mod, test_load, 2)
+trainer = MyDL.Trainer(mod, opter, loss_fn, dev)
+train_loss, test_loss = trainer.fit(train_load, epochs, check_path, test_load)
+T.save(mod, mod_path)
+MyDL.graph_loss(train_loss, test_loss)
+    
+cm = MyDL.conf_mat(mod, test_load)
 total = cm.sum().item()
 corr = cm.diag().sum().item()
 acc = 100 * corr / total
