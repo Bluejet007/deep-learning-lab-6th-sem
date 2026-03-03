@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader, Dataset
 import kagglehub
 import glob
 from PIL import Image
+from matplotlib import pyplot as plt
 
 # Week 6
 def conf_mat(mod: nn.Module, loader: DataLoader, num_classes: int=10) -> T.Tensor:
@@ -24,6 +25,16 @@ def conf_mat(mod: nn.Module, loader: DataLoader, num_classes: int=10) -> T.Tenso
                 cm[t.long(), p.long()] += 1
 
     return cm
+
+def graph_loss(loss1: list, loss2: list | None=None, l1_tag: str='Train loss', l2_tag: str='Test loss', title: str='Loss graph'):
+    plt.title(title)
+    plt.plot(loss1, label=l1_tag)
+
+    if loss2 is not None:
+        plt.plot(loss2, label=l2_tag)
+    
+    plt.legend()
+    plt.show()
 
 # Week 3
 class MyDataset(Dataset):
@@ -84,9 +95,9 @@ class Trainer:
         self.loss_fn = criterion
         self.dev = device
 
-    def one_epoch(self, loader: DataLoader) -> T.Tensor:
+    def one_epoch(self, loader: DataLoader, train: bool=True) -> float:
         self.mod.train()
-        loss = 0.0
+        losst = 0.0
 
         for x, y in loader:
             x = x.to(self.dev, non_blocking=True)
@@ -95,47 +106,55 @@ class Trainer:
             self.opter.zero_grad()
             logits = self.mod(x)
             loss = self.loss_fn(logits, y)
-            loss.backward()
-            self.opter.step()
 
-            loss += loss.item()
+            if train:
+                loss.backward()
+                self.opter.step()
 
-        return loss / len(loader)
+            losst += loss.item()
 
-    def fit(self, loader: DataLoader, eps: int, check_path: str | None= None) -> list[T.Tensor]:
-        loss_l = []
+        return losst / len(loader)
+
+    def fit(self, train_loader: DataLoader, eps: int, check_path: str | None=None, test_loader: DataLoader | None=None) -> tuple[list[float], list[float]]:
+        train_loss_l: list[float] = []
+        test_loss_l: list[float] = []
         start = 0
         
         if check_path is not None and os.path.exists(check_path):
             check = T.load(check_path)
+            train_loss_l = check['train_loss_l']
+            test_loss_l = check['test_loss_l']
             start = check['l_epoch'] + 1
             self.mod.load_state_dict(check['model_state'])
             self.opter.load_state_dict(check['opter_state'])
             print(f'Loading checkpoint after epoch {start}')
 
         for e in range(start, eps):
-            avg_loss = self.one_epoch(loader)
-            loss_l.append(avg_loss)
+            train_loss = self.one_epoch(train_loader)
+            train_loss_l.append(train_loss)
 
-            print(f'Epoch [{e+1}/{eps}] loss: {avg_loss}')
+            print(f'Epoch [{e+1}/{eps}] loss: {train_loss}')
 
             if check_path is not None:
                 check = {
-                    'l_loss': avg_loss,
+                    'train_loss_l': train_loss_l,
+                    'test_loss_l': test_loss_l,
                     'l_epoch': e,
                     'model_state': self.mod.state_dict(),
                     'opter_state': self.opter.state_dict()
                 }
                 T.save(check, check_path)
+            
+            if test_loader is not None:
+                test_loss = self.one_epoch(test_loader, False)
+                test_loss_l.append(test_loss)
 
-        return loss_l
+        return train_loss_l, test_loss_l
     
 # Week 7
 class AlexDataset(Dataset):
     def __init__(self, transform, str='train'):
-        print("Trying to fetch dataset from Kaggle....")
         path = kagglehub.dataset_download("birajsth/cats-and-dogs-filtered")
-        print("Dataset found at: ", path)
         self.imgs_path = f'{path}/cats_and_dogs_filtered/{str}/'
         file_list = glob.glob(self.imgs_path + '*')
         self.data = []
