@@ -115,10 +115,11 @@ class Trainer:
 
         return losst / len(loader)
 
-    def fit(self, train_loader: DataLoader, eps: int, check_path: str | None=None, test_loader: DataLoader | None=None) -> tuple[list[float], list[float]]:
+    def fit(self, train_loader: DataLoader, eps: int, check_path: str | None=None, test_loader: DataLoader | None=None, patience: int | None=None) -> tuple[list[float], list[float]]:
         train_loss_l: list[float] = []
         test_loss_l: list[float] = []
         start = 0
+        P = 0
         
         if check_path is not None and os.path.exists(check_path):
             check = T.load(check_path)
@@ -148,6 +149,12 @@ class Trainer:
             if test_loader is not None:
                 test_loss = self.one_epoch(test_loader, False)
                 test_loss_l.append(test_loss)
+
+                
+                if patience is not None and len(test_loss_l) > 1:
+                    P = P + 1 if test_loss_l[-2] < test_loss_l[-1] else 0
+                    if P > patience:
+                        break
 
         return train_loss_l, test_loss_l
     
